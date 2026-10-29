@@ -1,0 +1,499 @@
+{
+  "name": "컷 업로드 v8 (표지 00.jpg)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b1",
+      "name": "수동 실행",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "ig_user_id",
+              "value": "여기에_user_id_숫자",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "base_url",
+              "value": "https://여기에_도메인/media",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "episode",
+              "value": "2026-10-28_001",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "cut_count",
+              "value": "4",
+              "type": "string"
+            },
+            {
+              "id": "c7",
+              "name": "has_cover",
+              "value": "yes",
+              "type": "string"
+            },
+            {
+              "id": "c8",
+              "name": "series",
+              "value": "여기에_캐릭터이름",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "title",
+              "value": "여기에_제목",
+              "type": "string"
+            },
+            {
+              "id": "c6",
+              "name": "hashtags",
+              "value": "#인스타툰 #AI생성",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2",
+      "name": "설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $input.first().json;\nconst folder = String(s.episode).trim();\nconst m = folder.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) {\n  throw new Error(`episode는 2026-10-28_001 형식이어야 해요. 지금 값: ${s.episode}`);\n}\nconst epNo = Number(m[2]);\nconst cover = String(s.has_cover).trim().toLowerCase();\nif (!['yes', 'no'].includes(cover)) {\n  throw new Error(`has_cover는 yes 또는 no여야 해요. 지금 값: ${s.has_cover}`);\n}\nconst n = Number(s.cut_count);\nconst start = cover === 'yes' ? 0 : 1;\nconst total = n + (cover === 'yes' ? 1 : 0);\nif (!Number.isInteger(n) || n < 0 || total < 1 || total > 20) {\n  throw new Error(`표지 포함 1~20장이어야 해요. 지금: 표지 ${cover}, cut_count ${s.cut_count}`);\n}\nconst base = s.base_url.replace(/\\/$/, '');\nconst caption = `[${s.series} ${epNo}화] ${s.title}\\n\\n📝 대본: 직접 씀 / 🎨 그림: AI 생성\\n\\n${s.hashtags}`;\nreturn Array.from({ length: total }, (_, i) => ({\n  json: { image_url: `${base}/${folder}/${String(start + i).padStart(2, '0')}.jpg`, caption, cut_count: total }\n}));"
+      },
+      "id": "b3",
+      "name": "컷 주소·캡션 만들기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "if1",
+              "leftValue": "={{ $json.cut_count }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b4",
+      "name": "1장인가?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        600,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.image_url }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.caption }}"
+            },
+            {
+              "name": "is_ai_generated",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b5",
+      "name": "[1장] 사진 등록 (AI 라벨)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.image_url }}"
+            },
+            {
+              "name": "is_carousel_item",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b6",
+      "name": "[여러 장] 컷 등록",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        800,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "id",
+              "renameField": true,
+              "outputFieldName": "ids"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b7",
+      "name": "컷 ID 모으기",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "b8",
+      "name": "10초 기다리기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        400
+      ],
+      "webhookId": "cuts-wait-a"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "CAROUSEL"
+            },
+            {
+              "name": "children",
+              "value": "={{ $json.ids.join(',') }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('컷 주소·캡션 만들기').first().json.caption }}"
+            },
+            {
+              "name": "is_ai_generated",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b9",
+      "name": "[여러 장] 묶기 (AI 라벨)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "creation_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b10",
+      "name": "게시할 ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "id": "b11",
+      "name": "15초 기다리기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1800,
+        200
+      ],
+      "webhookId": "cuts-wait-b"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.instagram.com/{{ $('게시할 ID').first().json.creation_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "status_code"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b12",
+      "name": "상태 확인",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $('게시할 ID').first().json.creation_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b13",
+      "name": "게시하기",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "수동 실행": {
+      "main": [
+        [
+          {
+            "node": "설정",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "설정": {
+      "main": [
+        [
+          {
+            "node": "컷 주소·캡션 만들기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "컷 주소·캡션 만들기": {
+      "main": [
+        [
+          {
+            "node": "1장인가?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1장인가?": {
+      "main": [
+        [
+          {
+            "node": "[1장] 사진 등록 (AI 라벨)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "[여러 장] 컷 등록",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[1장] 사진 등록 (AI 라벨)": {
+      "main": [
+        [
+          {
+            "node": "게시할 ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[여러 장] 컷 등록": {
+      "main": [
+        [
+          {
+            "node": "컷 ID 모으기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "컷 ID 모으기": {
+      "main": [
+        [
+          {
+            "node": "10초 기다리기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10초 기다리기": {
+      "main": [
+        [
+          {
+            "node": "[여러 장] 묶기 (AI 라벨)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "[여러 장] 묶기 (AI 라벨)": {
+      "main": [
+        [
+          {
+            "node": "게시할 ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "게시할 ID": {
+      "main": [
+        [
+          {
+            "node": "15초 기다리기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15초 기다리기": {
+      "main": [
+        [
+          {
+            "node": "상태 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "상태 확인": {
+      "main": [
+        [
+          {
+            "node": "게시하기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}

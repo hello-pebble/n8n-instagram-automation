@@ -26,6 +26,7 @@
 | compose.yaml | 서버에서 실제로 쓰는 파일 (커밋 금지, 내부 이름이 들어 있음) |
 | Caddyfile | 서버의 기존 Caddyfile에 추가할 블록: `/media/*` → 컷 이미지 서버(browse 없음), 나머지 → n8n |
 | upload-reel-v1.json | 릴스 업로드 워크플로 (설정 노드는 플레이스홀더) |
+| upload-cuts-v8.json | 이미지(캐러셀) 업로드 워크플로. v7에서 캐릭터 이름을 `series` 설정값으로 뺀 공개용 사본. 원본 v7은 로컬에만 |
 | .env | `N8N_DOMAIN`, `PROXY_NETWORK` (커밋 금지) |
 | local-files/media/<episode>/ | 컷 이미지 (커밋 금지) |
 
