@@ -166,3 +166,27 @@ mkdir -p ~/n8n-server/local-files/media/test
 | caddy 로그에 인증서 발급 실패 | DuckDNS IP가 틀렸거나 80 포트가 막힘 | `nslookup`, 2·3번 재확인 |
 | `port is already allocated` | 80/443을 다른 프로그램이 사용 중 | `sudo ss -tlnp` 로 찾아서 정리 |
 | n8n이 파일을 못 씀 | local-files 권한 | `sudo chown -R 1000:1000 local-files` |
+
+---
+
+## 9. 중복 게시 방지 (n8n Data Table)
+
+같은 에피소드가 두 번 올라가는 것을 막는다. 올린 에피소드를 n8n Data Table `posted`에 기록하고, 시작할 때 이미 있으면 이후 단계(등록·게시)가 실행되지 않는다.
+
+**한 번만 준비**
+
+1. n8n 프로젝트의 Overview → **Data tables** 탭에서 새 테이블을 만든다. (워크플로의 Data table 노드 목록에서 **Create new**로도 된다.)
+2. 이름은 `posted`, 컬럼은 문자열(string) 두 개: `episode`, `kind`
+3. 워크플로 JSON을 가져온 뒤, `이미 올렸나? 확인`과 `올린 기록 남기기` 노드에 Data table `posted`가 선택되어 있는지 확인한다.
+
+**동작**
+
+| 상황 | 결과 |
+|---|---|
+| 처음 올리는 에피소드 | 통과 → 게시 → 게시 성공 후 `posted`에 `episode`와 `kind`(릴스는 `reel`, 이미지는 `cuts`)를 기록 |
+| 이미 올린 에피소드 | `이미 올렸나? 확인` 노드에서 항목 0개로 끝나고, 등록·게시는 실행되지 않는다 |
+| 처리 중 오류로 멈춤 (`ERROR` 등) | 게시 전이라 기록이 남지 않으므로 그대로 다시 실행하면 된다 |
+| 같은 에피소드를 일부러 다시 올림 | `posted` 표에서 그 행을 지우고 실행 |
+
+- 이미지(`cuts`)와 릴스(`reel`)는 같은 에피소드 번호여도 각각 한 번씩 올릴 수 있다.
+- 막는 것은 같은 `episode`로 다시 시작하는 경우다. `게시하기` 노드만 따로 실행(Execute step)하는 것은 막지 못하니, 실행은 처음부터 전체로 한다.

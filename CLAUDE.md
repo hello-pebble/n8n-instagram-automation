@@ -15,7 +15,7 @@
 - [x] PC 컷 폴더 → 서버 local-files/media 전송: `scp`로 에피소드 폴더 복사
 - [x] 릴스 게시 성공 (upload-reel-v1.json)
 - [ ] 이미지 캐러셀(upload-cuts) 서버에서 실행 확인
-- [ ] 중복 게시 방지 (n8n Data Table에 올린 episode 기록 후 시작 시 검사)
+- [ ] 중복 게시 방지: Data Table `posted`(episode, kind)에 기록하고 시작 시 검사. 워크플로 반영 완료, 서버 n8n에서 표 생성과 동작 확인 전
 - [ ] 토큰 자동 갱신(장기 토큰 60일), 매일 예약 실행
 - [ ] 유튜브 쇼츠 업로드 (별도 워크플로)
 

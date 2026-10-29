@@ -352,6 +352,89 @@
         2200,
         200
       ]
+    },
+    {
+      "id": "g1",
+      "name": "이미 올렸나? 확인",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        300,
+        60
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posted"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "episode",
+              "keyValue": "={{ $json.episode }}"
+            },
+            {
+              "keyName": "kind",
+              "keyValue": "cuts"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "g2",
+      "name": "올린 기록 남기기",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2400,
+        200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "posted"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "episode": "={{ $(설정).first().json.episode }}",
+            "kind": "cuts"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "episode",
+              "displayName": "episode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "kind",
+              "displayName": "kind",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      }
     }
   ],
   "connections": {
@@ -370,7 +453,7 @@
       "main": [
         [
           {
-            "node": "컷 주소·캡션 만들기",
+            "node": "이미 올렸나? 확인",
             "type": "main",
             "index": 0
           }
@@ -488,6 +571,28 @@
         [
           {
             "node": "게시하기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "이미 올렸나? 확인": {
+      "main": [
+        [
+          {
+            "node": "컷 주소·캡션 만들기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "게시하기": {
+      "main": [
+        [
+          {
+            "node": "올린 기록 남기기",
             "type": "main",
             "index": 0
           }
