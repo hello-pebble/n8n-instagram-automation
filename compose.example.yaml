@@ -1,0 +1,44 @@
+# 80/443은 서버에 이미 떠 있는 caddy가 쓴다.
+# 여기서는 n8n과 컷 이미지 서버만 띄우고, 기존 caddy가 이름(n8n-app, n8n-media)으로 연결한다.
+# 기존 caddy의 Docker 네트워크 이름은 .env 의 PROXY_NETWORK 에 둔다 (저장소에는 넣지 않는다).
+services:
+  media:
+    image: caddy:2
+    container_name: n8n-media
+    restart: unless-stopped
+    # browse 없음 → 폴더 목록은 404, 파일 이름을 알아야만 열린다
+    command: caddy file-server --root /srv --listen :80
+    volumes:
+      - ./local-files/media:/srv/media:ro
+    networks: [proxy]
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    container_name: n8n-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST=${N8N_DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - N8N_EDITOR_BASE_URL=https://${N8N_DOMAIN}/
+      - N8N_WEBHOOK_URL=https://${N8N_DOMAIN}/
+      - N8N_PROXY_HOPS=1
+      - NODE_ENV=production
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - TZ=Asia/Seoul
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RESTRICT_FILE_ACCESS_TO=/files
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./local-files:/files
+    networks: [proxy]
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK}
+    external: true
+
+volumes:
+  n8n_data:

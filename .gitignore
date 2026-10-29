@@ -1,0 +1,9 @@
+.env
+local-files/
+backup/
+*.jpg
+*.jpeg
+*.png
+compose.yaml
+upload-cuts-v7.json
+velog-*.md

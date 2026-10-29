@@ -1,0 +1,15 @@
+# 서버의 기존 Caddyfile(/home/ubuntu/caddy/Caddyfile) 맨 아래에 "추가"할 블록.
+# 내도메인.duckdns.org 는 서버에서만 실제 주소로 바꾼다 (저장소에는 실제 도메인 금지).
+내도메인.duckdns.org {
+	encode gzip
+
+	# 인스타가 가져갈 컷 이미지: https://도메인/media/2026-10-28_001/00.jpg
+	handle /media/* {
+		reverse_proxy n8n-media:80
+	}
+
+	# 나머지는 전부 n8n 화면
+	handle {
+		reverse_proxy n8n-app:5678
+	}
+}

@@ -1,0 +1,211 @@
+{
+  "name": "릴스 업로드 v1 (reel.mp4)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "r1",
+      "name": "수동 실행",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "s1", "name": "ig_user_id", "value": "여기에_user_id_숫자", "type": "string" },
+            { "id": "s2", "name": "base_url", "value": "https://여기에_도메인/media", "type": "string" },
+            { "id": "s3", "name": "episode", "value": "2026-10-28_001", "type": "string" },
+            { "id": "s4", "name": "series", "value": "여기에_캐릭터이름", "type": "string" },
+            { "id": "s5", "name": "title", "value": "여기에_제목", "type": "string" },
+            { "id": "s6", "name": "hashtags", "value": "#인스타툰 #AI생성", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r2",
+      "name": "설정",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $input.first().json;\nconst folder = String(s.episode).trim();\nconst m = folder.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) {\n  throw new Error(`episode는 2026-10-28_001 형식이어야 해요. 지금 값: ${s.episode}`);\n}\nconst epNo = Number(m[2]);\nconst base = s.base_url.replace(/\\/$/, '');\nconst caption = `[${s.series} ${epNo}화] ${s.title}\\n\\n${s.hashtags}`;\nreturn [{ json: { video_url: `${base}/${folder}/reel.mp4`, caption } }];"
+      },
+      "id": "r3",
+      "name": "영상 주소·캡션 만들기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "media_type", "value": "REELS" },
+            { "name": "video_url", "value": "={{ $json.video_url }}" },
+            { "name": "caption", "value": "={{ $json.caption }}" },
+            { "name": "share_to_feed", "value": "true" },
+            { "name": "is_ai_generated", "value": "true" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r4",
+      "name": "릴스 등록 (AI 라벨)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "d1", "name": "creation_id", "value": "={{ $json.id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r5",
+      "name": "게시할 ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [800, 200]
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "r6",
+      "name": "30초 기다리기",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1000, 200],
+      "webhookId": "reel-wait-a"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.instagram.com/{{ $('게시할 ID').first().json.creation_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "status_code" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r7",
+      "name": "상태 확인",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "if1",
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": "FINISHED",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "r8",
+      "name": "처리 끝났나?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1400, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "if2",
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": "IN_PROGRESS",
+              "operator": { "type": "string", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "r9",
+      "name": "실패인가?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1600, 400]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=릴스 처리 실패: {{ $json.status_code }} (영상 형식·길이·주소를 확인하세요)"
+      },
+      "id": "r10",
+      "name": "중단",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [1800, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "creation_id", "value": "={{ $('게시할 ID').first().json.creation_id }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "r11",
+      "name": "게시하기",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1600, 100]
+    }
+  ],
+  "connections": {
+    "수동 실행": { "main": [[{ "node": "설정", "type": "main", "index": 0 }]] },
+    "설정": { "main": [[{ "node": "영상 주소·캡션 만들기", "type": "main", "index": 0 }]] },
+    "영상 주소·캡션 만들기": { "main": [[{ "node": "릴스 등록 (AI 라벨)", "type": "main", "index": 0 }]] },
+    "릴스 등록 (AI 라벨)": { "main": [[{ "node": "게시할 ID", "type": "main", "index": 0 }]] },
+    "게시할 ID": { "main": [[{ "node": "30초 기다리기", "type": "main", "index": 0 }]] },
+    "30초 기다리기": { "main": [[{ "node": "상태 확인", "type": "main", "index": 0 }]] },
+    "상태 확인": { "main": [[{ "node": "처리 끝났나?", "type": "main", "index": 0 }]] },
+    "처리 끝났나?": {
+      "main": [
+        [{ "node": "게시하기", "type": "main", "index": 0 }],
+        [{ "node": "실패인가?", "type": "main", "index": 0 }]
+      ]
+    },
+    "실패인가?": {
+      "main": [
+        [{ "node": "중단", "type": "main", "index": 0 }],
+        [{ "node": "30초 기다리기", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionTimeout": 900 }
+}
