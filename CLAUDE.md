@@ -17,6 +17,7 @@
 - [x] 이미지 캐러셀 서버에서 실행 확인 (표지+5컷, 2026-10-30_001 게시 성공)
 - [x] 중복 게시 방지: Data Table `posted`(episode, kind)에 기록하고 시작 시 검사. 같은 episode를 다시 실행하면 `이미 올렸나? 확인`에서 멈추는 것까지 서버에서 확인 (이미지 워크플로 기준)
 - [x] 이미지 자동 탐색 버전(upload-cuts-v9) 서버 실행 확인
+- [ ] 오래된 순 하나씩 버전(upload-cuts-v10, upload-reel-v3) 서버 실행 확인. `파일 목록 읽기`(Read/Write Files) 노드를 쓰므로 서버 n8n에서 폴더가 보이는지 먼저 확인. 모의 시험만 통과
 - [ ] 릴스 자동 탐색 버전(upload-reel-v2) 서버 실행 확인 (모의 시험은 통과, 실제 n8n에서는 아직)
 - [ ] 토큰 자동 갱신(장기 토큰 60일), 매일 예약 실행 (시작 노드를 Schedule로 교체)
 - [ ] 유튜브 쇼츠 업로드 (별도 워크플로)
@@ -27,15 +28,15 @@
 | compose.example.yaml | 예시 파일. 서버에서 `compose.yaml`로 복사해 쓴다. n8n(127.0.0.1:5678만) + 컷 이미지 서버, 기존 caddy 네트워크에 연결, 볼륨 n8n_data |
 | compose.yaml | 서버에서 실제로 쓰는 파일 (커밋 금지, 내부 이름이 들어 있음) |
 | Caddyfile | 서버의 기존 Caddyfile에 추가할 블록: `/media/*` → 컷 이미지 서버(browse 없음), 나머지 → n8n |
-| upload-reel-v2.json | 릴스 업로드 워크플로. 오늘 날짜 폴더(`_001`~)에서 `reel.mp4`를 찾아 아직 안 올린 첫 에피소드를 올림 (설정 노드는 플레이스홀더) |
-| upload-cuts-v9.json | 이미지(캐러셀) 업로드 워크플로. `title.txt`가 있는 오늘 날짜 폴더를 찾고 표지 유무·컷 수를 자동 계산. v7에서 캐릭터 이름을 `series` 설정값으로 뺀 공개용. 원본 v7은 로컬에만 |
+| upload-reel-v3.json | 릴스 업로드 워크플로. 서버의 `title.txt`가 있는 폴더를 오래된 순으로 보고 `reel.mp4`가 있고 아직 안 올린 첫 에피소드 하나를 올림 (설정 노드는 플레이스홀더) |
+| upload-cuts-v10.json | 이미지(캐러셀) 업로드 워크플로. 안 올린 가장 오래된 폴더 하나를 고르고 표지 유무·컷 수를 자동 계산. v7에서 캐릭터 이름을 `series` 설정값으로 뺀 공개용. 원본 v7은 로컬에만 |
 | .env | `N8N_DOMAIN`, `PROXY_NETWORK` (커밋 금지) |
 | local-files/media/<episode>/ | 컷 이미지 (커밋 금지) |
 
 ## 워크플로 규칙 (이미 로컬에서 확정)
 - 폴더명 `YYYY-MM-DD_NNN`, 파일명 `00.jpg`(표지) `01.jpg`~, JPEG만
 - 설정 노드(고정값, 한 번만 입력): ig_user_id, base_url(`https://<도메인>/media`), series(캐릭터 이름), hashtags
-- episode, cut_count, has_cover, title은 입력하지 않고 자동: 오늘 날짜 폴더 `_001`~`_020` 조회, `00.jpg`~`20.jpg` 조회로 표지 유무와 컷 수 계산, 폴더의 `title.txt`에서 제목 읽기
+- episode, cut_count, has_cover, title은 입력하지 않고 자동: `/files/media/*/title.txt`로 폴더를 찾아 오래된 순으로 안 올린 하나 선택, `00.jpg`~`20.jpg` 조회로 표지 유무와 컷 수 계산, 폴더의 `title.txt`에서 제목 읽기
 - 에피소드 폴더에 `title.txt`(UTF-8, 첫 줄이 제목, `#숫자` 금지)를 둔다. 이미지를 다 올린 뒤 **마지막에** 올리면 준비 완료 표시가 된다 (릴스는 `reel.mp4`가 표시)
 - 이미지 번호가 중간에 비면(`02.jpg` 없음, `03.jpg` 있음) 오류로 멈춘다. 이미 올린 episode는 Data Table `posted`가 막는다
 - 1장이면 일반 이미지, 2장 이상이면 CAROUSEL. `is_ai_generated=true`는 최종 컨테이너에만

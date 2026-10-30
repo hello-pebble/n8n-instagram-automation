@@ -1,5 +1,5 @@
 {
-  "name": "컷 업로드 v9 (폴더 자동 탐색)",
+  "name": "컷 업로드 v10 (오래된 순 하나씩)",
   "nodes": [
     {
       "parameters": {},
@@ -62,7 +62,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2200,
+        2600,
         200
       ]
     },
@@ -94,7 +94,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        2400,
+        2800,
         200
       ]
     },
@@ -128,7 +128,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2800,
+        3200,
         0
       ]
     },
@@ -158,7 +158,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2600,
+        3000,
         400
       ]
     },
@@ -180,7 +180,7 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        2800,
+        3200,
         400
       ]
     },
@@ -195,7 +195,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        3000,
+        3400,
         400
       ],
       "webhookId": "cuts-wait-a"
@@ -234,7 +234,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3200,
+        3600,
         400
       ]
     },
@@ -257,7 +257,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        3400,
+        3800,
         200
       ]
     },
@@ -272,7 +272,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        3600,
+        4000,
         200
       ],
       "webhookId": "cuts-wait-b"
@@ -299,7 +299,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3800,
+        4200,
         200
       ]
     },
@@ -325,7 +325,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4000,
+        4400,
         200
       ]
     },
@@ -335,7 +335,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1000,
+        800,
         200
       ],
       "parameters": {
@@ -367,7 +367,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        4200,
+        4600,
         200
       ],
       "parameters": {
@@ -413,60 +413,12 @@
       }
     },
     {
-      "id": "n1",
-      "name": "후보 폴더 만들기",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        400,
-        200
-      ],
-      "parameters": {
-        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst today = $now.toFormat('yyyy-MM-dd');\nconst out = [];\nfor (let i = 1; i <= 20; i++) {\n  const episode = `${today}_${String(i).padStart(3, '0')}`;\n  out.push({ json: { episode, url: `${base}/${episode}/title.txt` } });\n}\nreturn out;"
-      }
-    },
-    {
-      "id": "n2",
-      "name": "폴더 조회",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        600,
-        200
-      ],
-      "parameters": {
-        "method": "HEAD",
-        "url": "={{ $json.url }}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "neverError": true
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "n3",
-      "name": "있는 폴더 고르기",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        800,
-        200
-      ],
-      "parameters": {
-        "jsCode": "const cands = $('후보 폴더 만들기').all();\nconst res = $input.all();\nreturn cands\n  .filter((c, i) => res[i] && res[i].json.statusCode === 200)\n  .map((c) => ({ json: { episode: c.json.episode } }));"
-      }
-    },
-    {
       "id": "n4",
       "name": "첫 번째만",
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        1200,
+        1600,
         200
       ],
       "parameters": {
@@ -479,7 +431,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1400,
+        1800,
         200
       ],
       "parameters": {
@@ -492,7 +444,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1600,
+        2000,
         200
       ],
       "parameters": {
@@ -514,7 +466,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1800,
+        2200,
         200
       ],
       "parameters": {
@@ -527,7 +479,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2000,
+        2400,
         200
       ],
       "parameters": {
@@ -540,6 +492,82 @@
             }
           }
         }
+      }
+    },
+    {
+      "id": "m1",
+      "name": "파일 목록 읽기",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        400,
+        200
+      ],
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "/files/media/*/title.txt",
+        "options": {}
+      }
+    },
+    {
+      "id": "m2",
+      "name": "에피소드 정렬",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const eps = [];\nfor (const it of $input.all()) {\n  const dir = it.binary && it.binary.data && it.binary.data.directory;\n  if (!dir) continue;\n  const ep = String(dir).split('/').filter(Boolean).pop();\n  if (/^\\d{4}-\\d{2}-\\d{2}_\\d{3}$/.test(ep)) eps.push(ep);\n}\nreturn [...new Set(eps)].sort().map((episode) => ({ json: { episode } }));"
+      }
+    },
+    {
+      "id": "m3",
+      "name": "올릴 파일 확인 후보",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst out = [];\nfor (const it of $input.all()) {\n  const ep = it.json.episode;\n  for (const f of ['00', '01']) out.push({ json: { episode: ep, url: `${base}/${ep}/${f}.jpg` } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "m4",
+      "name": "올릴 파일 확인",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "m5",
+      "name": "준비된 것만 고르기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const cands = $('올릴 파일 확인 후보').all();\nconst res = $input.all();\nconst ready = new Set();\ncands.forEach((c, i) => { if (res[i] && res[i].json.statusCode === 200) ready.add(c.json.episode); });\nreturn $('이미 올렸나? 확인').all()\n  .filter((it) => ready.has(it.json.episode))\n  .map((it) => ({ json: { episode: it.json.episode } }));"
       }
     }
   ],
@@ -559,7 +587,7 @@
       "main": [
         [
           {
-            "node": "후보 폴더 만들기",
+            "node": "파일 목록 읽기",
             "type": "main",
             "index": 0
           }
@@ -687,7 +715,7 @@
       "main": [
         [
           {
-            "node": "첫 번째만",
+            "node": "올릴 파일 확인 후보",
             "type": "main",
             "index": 0
           }
@@ -699,39 +727,6 @@
         [
           {
             "node": "올린 기록 남기기",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "후보 폴더 만들기": {
-      "main": [
-        [
-          {
-            "node": "폴더 조회",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "폴더 조회": {
-      "main": [
-        [
-          {
-            "node": "있는 폴더 고르기",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "있는 폴더 고르기": {
-      "main": [
-        [
-          {
-            "node": "이미 올렸나? 확인",
             "type": "main",
             "index": 0
           }
@@ -787,6 +782,61 @@
         [
           {
             "node": "컷 주소·캡션 만들기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "파일 목록 읽기": {
+      "main": [
+        [
+          {
+            "node": "에피소드 정렬",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "에피소드 정렬": {
+      "main": [
+        [
+          {
+            "node": "이미 올렸나? 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "올릴 파일 확인 후보": {
+      "main": [
+        [
+          {
+            "node": "올릴 파일 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "올릴 파일 확인": {
+      "main": [
+        [
+          {
+            "node": "준비된 것만 고르기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "준비된 것만 고르기": {
+      "main": [
+        [
+          {
+            "node": "첫 번째만",
             "type": "main",
             "index": 0
           }
