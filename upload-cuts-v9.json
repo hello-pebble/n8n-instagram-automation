@@ -1,5 +1,5 @@
 {
-  "name": "컷 업로드 v8 (표지 00.jpg)",
+  "name": "컷 업로드 v9 (폴더 자동 탐색)",
   "nodes": [
     {
       "parameters": {},
@@ -29,33 +29,9 @@
               "type": "string"
             },
             {
-              "id": "c3",
-              "name": "episode",
-              "value": "2026-10-28_001",
-              "type": "string"
-            },
-            {
-              "id": "c4",
-              "name": "cut_count",
-              "value": "4",
-              "type": "string"
-            },
-            {
-              "id": "c7",
-              "name": "has_cover",
-              "value": "yes",
-              "type": "string"
-            },
-            {
               "id": "c8",
               "name": "series",
               "value": "여기에_캐릭터이름",
-              "type": "string"
-            },
-            {
-              "id": "c5",
-              "name": "title",
-              "value": "여기에_제목",
               "type": "string"
             },
             {
@@ -79,14 +55,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const s = $input.first().json;\nconst folder = String(s.episode).trim();\nconst m = folder.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) {\n  throw new Error(`episode는 2026-10-28_001 형식이어야 해요. 지금 값: ${s.episode}`);\n}\nconst epNo = Number(m[2]);\nconst cover = String(s.has_cover).trim().toLowerCase();\nif (!['yes', 'no'].includes(cover)) {\n  throw new Error(`has_cover는 yes 또는 no여야 해요. 지금 값: ${s.has_cover}`);\n}\nconst n = Number(s.cut_count);\nconst start = cover === 'yes' ? 0 : 1;\nconst total = n + (cover === 'yes' ? 1 : 0);\nif (!Number.isInteger(n) || n < 0 || total < 1 || total > 20) {\n  throw new Error(`표지 포함 1~20장이어야 해요. 지금: 표지 ${cover}, cut_count ${s.cut_count}`);\n}\nconst base = s.base_url.replace(/\\/$/, '');\nconst caption = `[${s.series} ${epNo}화] ${s.title}\\n\\n📝 대본: 직접 씀 / 🎨 그림: AI 생성\\n\\n${s.hashtags}`;\nreturn Array.from({ length: total }, (_, i) => ({\n  json: { image_url: `${base}/${folder}/${String(start + i).padStart(2, '0')}.jpg`, caption, cut_count: total }\n}));"
+        "jsCode": "const s = $('설정').first().json;\nconst c = $('컷 수 계산').first().json;\nconst title = String($input.first().json.data ?? '').replace(/^﻿/, '').split(/\\r?\\n/)[0].trim();\nif (!title) throw new Error(`title.txt가 비어 있어요: ${c.episode}`);\nif (/#\\s*\\d/.test(title)) throw new Error(`제목에 #숫자는 쓸 수 없어요(해시태그로 변환돼요): ${title}`);\nconst m = c.episode.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) throw new Error(`episode 형식 오류: ${c.episode}`);\nconst epNo = Number(m[2]);\nif (c.total > 20) throw new Error(`이미지는 20장 이하여야 해요: ${c.total}장`);\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst caption = `[${s.series} ${epNo}화] ${title}\\n\\n📝 대본: 직접 씀 / 🎨 그림: AI 생성\\n\\n${s.hashtags}`;\nreturn Array.from({ length: c.total }, (_, i) => ({\n  json: {\n    image_url: `${base}/${c.episode}/${String(c.start + i).padStart(2, '0')}.jpg`,\n    caption,\n    cut_count: c.total,\n    episode: c.episode,\n  },\n}));"
       },
       "id": "b3",
       "name": "컷 주소·캡션 만들기",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        400,
+        2200,
         200
       ]
     },
@@ -118,7 +94,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        600,
+        2400,
         200
       ]
     },
@@ -152,7 +128,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1000,
+        2800,
         0
       ]
     },
@@ -182,7 +158,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        800,
+        2600,
         400
       ]
     },
@@ -204,7 +180,7 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        1000,
+        2800,
         400
       ]
     },
@@ -219,7 +195,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1200,
+        3000,
         400
       ],
       "webhookId": "cuts-wait-a"
@@ -258,7 +234,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1400,
+        3200,
         400
       ]
     },
@@ -281,7 +257,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1600,
+        3400,
         200
       ]
     },
@@ -296,7 +272,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1800,
+        3600,
         200
       ],
       "webhookId": "cuts-wait-b"
@@ -323,7 +299,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2000,
+        3800,
         200
       ]
     },
@@ -349,7 +325,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2200,
+        4000,
         200
       ]
     },
@@ -359,8 +335,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        300,
-        60
+        1000,
+        200
       ],
       "parameters": {
         "resource": "row",
@@ -391,7 +367,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        2400,
+        4200,
         200
       ],
       "parameters": {
@@ -405,7 +381,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "episode": "={{ $(설정).first().json.episode }}",
+            "episode": "={{ $('컷 주소·캡션 만들기').first().json.episode }}",
             "kind": "cuts"
           },
           "matchingColumns": [],
@@ -435,6 +411,136 @@
           "convertFieldsToString": false
         }
       }
+    },
+    {
+      "id": "n1",
+      "name": "후보 폴더 만들기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst today = $now.toFormat('yyyy-MM-dd');\nconst out = [];\nfor (let i = 1; i <= 20; i++) {\n  const episode = `${today}_${String(i).padStart(3, '0')}`;\n  out.push({ json: { episode, url: `${base}/${episode}/title.txt` } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "n2",
+      "name": "폴더 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n3",
+      "name": "있는 폴더 고르기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const cands = $('후보 폴더 만들기').all();\nconst res = $input.all();\nreturn cands\n  .filter((c, i) => res[i] && res[i].json.statusCode === 200)\n  .map((c) => ({ json: { episode: c.json.episode } }));"
+      }
+    },
+    {
+      "id": "n4",
+      "name": "첫 번째만",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "maxItems": 1
+      }
+    },
+    {
+      "id": "n5",
+      "name": "컷 후보 만들기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst episode = $input.first().json.episode;\nconst out = [];\nfor (let i = 0; i <= 20; i++) {\n  out.push({ json: { episode, url: `${base}/${episode}/${String(i).padStart(2, '0')}.jpg` } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "n6",
+      "name": "컷 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        200
+      ],
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n7",
+      "name": "컷 수 계산",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1800,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const episode = $('컷 후보 만들기').first().json.episode;\nconst ok = $input.all().map((r) => r.json.statusCode === 200);\nconst hasCover = ok[0];\nconst start = hasCover ? 0 : 1;\nlet total = 0;\nfor (let i = start; i < ok.length && ok[i]; i++) total++;\nif (ok.slice(start + total).some(Boolean)) throw new Error(`컷 번호가 중간에 비어 있어요(${episode}). 파일 이름을 확인하세요`);\nif (total === 0) return []; // 이미지 없는 폴더(영상만 있는 에피소드)는 조용히 건너뜀\nreturn [{ json: { episode, has_cover: hasCover, start, total } }];"
+      }
+    },
+    {
+      "id": "n8",
+      "name": "제목 읽기",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        200
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('설정').first().json.base_url.replace(/\\/$/, '') }}/{{ $json.episode }}/title.txt",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
     }
   ],
   "connections": {
@@ -453,7 +559,7 @@
       "main": [
         [
           {
-            "node": "이미 올렸나? 확인",
+            "node": "후보 폴더 만들기",
             "type": "main",
             "index": 0
           }
@@ -581,7 +687,7 @@
       "main": [
         [
           {
-            "node": "컷 주소·캡션 만들기",
+            "node": "첫 번째만",
             "type": "main",
             "index": 0
           }
@@ -593,6 +699,94 @@
         [
           {
             "node": "올린 기록 남기기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "후보 폴더 만들기": {
+      "main": [
+        [
+          {
+            "node": "폴더 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "폴더 조회": {
+      "main": [
+        [
+          {
+            "node": "있는 폴더 고르기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "있는 폴더 고르기": {
+      "main": [
+        [
+          {
+            "node": "이미 올렸나? 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "첫 번째만": {
+      "main": [
+        [
+          {
+            "node": "컷 후보 만들기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "컷 후보 만들기": {
+      "main": [
+        [
+          {
+            "node": "컷 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "컷 조회": {
+      "main": [
+        [
+          {
+            "node": "컷 수 계산",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "컷 수 계산": {
+      "main": [
+        [
+          {
+            "node": "제목 읽기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "제목 읽기": {
+      "main": [
+        [
+          {
+            "node": "컷 주소·캡션 만들기",
             "type": "main",
             "index": 0
           }

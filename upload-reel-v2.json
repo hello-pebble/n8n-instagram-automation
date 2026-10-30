@@ -1,5 +1,5 @@
 {
-  "name": "릴스 업로드 v1 (reel.mp4)",
+  "name": "릴스 업로드 v2 (폴더 자동 탐색)",
   "nodes": [
     {
       "parameters": {},
@@ -29,21 +29,9 @@
               "type": "string"
             },
             {
-              "id": "s3",
-              "name": "episode",
-              "value": "2026-10-28_001",
-              "type": "string"
-            },
-            {
               "id": "s4",
               "name": "series",
               "value": "여기에_캐릭터이름",
-              "type": "string"
-            },
-            {
-              "id": "s5",
-              "name": "title",
-              "value": "여기에_제목",
               "type": "string"
             },
             {
@@ -67,14 +55,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const s = $input.first().json;\nconst folder = String(s.episode).trim();\nconst m = folder.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) {\n  throw new Error(`episode는 2026-10-28_001 형식이어야 해요. 지금 값: ${s.episode}`);\n}\nconst epNo = Number(m[2]);\nconst base = s.base_url.replace(/\\/$/, '');\nconst caption = `[${s.series} ${epNo}화] ${s.title}\\n\\n${s.hashtags}`;\nreturn [{ json: { video_url: `${base}/${folder}/reel.mp4`, caption } }];"
+        "jsCode": "const s = $('설정').first().json;\nconst episode = $('첫 번째만').first().json.episode;\nconst title = String($input.first().json.data ?? '').replace(/^﻿/, '').split(/\\r?\\n/)[0].trim();\nif (!title) throw new Error(`title.txt가 비어 있어요: ${episode}`);\nif (/#\\s*\\d/.test(title)) throw new Error(`제목에 #숫자는 쓸 수 없어요(해시태그로 변환돼요): ${title}`);\nconst m = episode.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) throw new Error(`episode 형식 오류: ${episode}`);\nconst epNo = Number(m[2]);\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst caption = `[${s.series} ${epNo}화] ${title}\\n\\n${s.hashtags}`;\nreturn [{ json: { video_url: `${base}/${episode}/reel.mp4`, caption, episode } }];"
       },
       "id": "r3",
       "name": "영상 주소·캡션 만들기",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        400,
+        1400,
         200
       ]
     },
@@ -116,7 +104,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        600,
+        1600,
         200
       ]
     },
@@ -139,7 +127,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        800,
+        1800,
         200
       ]
     },
@@ -154,7 +142,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1000,
+        2000,
         200
       ],
       "webhookId": "reel-wait-a"
@@ -181,7 +169,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1200,
+        2200,
         200
       ]
     },
@@ -213,7 +201,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1400,
+        2400,
         200
       ]
     },
@@ -245,7 +233,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1600,
+        2600,
         400
       ]
     },
@@ -258,7 +246,7 @@
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        1800,
+        2800,
         500
       ]
     },
@@ -284,7 +272,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1600,
+        2600,
         100
       ]
     },
@@ -294,8 +282,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        300,
-        60
+        1000,
+        200
       ],
       "parameters": {
         "resource": "row",
@@ -326,7 +314,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1800,
+        2800,
         100
       ],
       "parameters": {
@@ -340,7 +328,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "episode": "={{ $(설정).first().json.episode }}",
+            "episode": "={{ $('영상 주소·캡션 만들기').first().json.episode }}",
             "kind": "reel"
           },
           "matchingColumns": [],
@@ -370,6 +358,88 @@
           "convertFieldsToString": false
         }
       }
+    },
+    {
+      "id": "n1",
+      "name": "후보 폴더 만들기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst today = $now.toFormat('yyyy-MM-dd');\nconst out = [];\nfor (let i = 1; i <= 20; i++) {\n  const episode = `${today}_${String(i).padStart(3, '0')}`;\n  out.push({ json: { episode, url: `${base}/${episode}/reel.mp4` } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "n2",
+      "name": "폴더 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        200
+      ],
+      "parameters": {
+        "method": "HEAD",
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "n3",
+      "name": "있는 폴더 고르기",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const cands = $('후보 폴더 만들기').all();\nconst res = $input.all();\nreturn cands\n  .filter((c, i) => res[i] && res[i].json.statusCode === 200)\n  .map((c) => ({ json: { episode: c.json.episode } }));"
+      }
+    },
+    {
+      "id": "n4",
+      "name": "첫 번째만",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "maxItems": 1
+      }
+    },
+    {
+      "id": "n5",
+      "name": "제목 읽기",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        200
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('설정').first().json.base_url.replace(/\\/$/, '') }}/{{ $json.episode }}/title.txt",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      }
     }
   ],
   "connections": {
@@ -388,7 +458,7 @@
       "main": [
         [
           {
-            "node": "이미 올렸나? 확인",
+            "node": "후보 폴더 만들기",
             "type": "main",
             "index": 0
           }
@@ -490,7 +560,7 @@
       "main": [
         [
           {
-            "node": "영상 주소·캡션 만들기",
+            "node": "첫 번째만",
             "type": "main",
             "index": 0
           }
@@ -502,6 +572,61 @@
         [
           {
             "node": "올린 기록 남기기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "후보 폴더 만들기": {
+      "main": [
+        [
+          {
+            "node": "폴더 조회",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "폴더 조회": {
+      "main": [
+        [
+          {
+            "node": "있는 폴더 고르기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "있는 폴더 고르기": {
+      "main": [
+        [
+          {
+            "node": "이미 올렸나? 확인",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "첫 번째만": {
+      "main": [
+        [
+          {
+            "node": "제목 읽기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "제목 읽기": {
+      "main": [
+        [
+          {
+            "node": "영상 주소·캡션 만들기",
             "type": "main",
             "index": 0
           }
