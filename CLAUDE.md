@@ -14,9 +14,10 @@
 - [x] 워크플로 JSON 서버로 가져오기, Credentials 재생성
 - [x] PC 컷 폴더 → 서버 local-files/media 전송: `scp`로 에피소드 폴더 복사
 - [x] 릴스 게시 성공 (upload-reel-v1.json)
-- [ ] 이미지 캐러셀(upload-cuts) 서버에서 실행 확인
-- [ ] 중복 게시 방지: Data Table `posted`(episode, kind)에 기록하고 시작 시 검사. 워크플로 반영 완료, 서버 n8n에서 표 생성과 동작 확인 전
-- [ ] 자동 탐색 버전(upload-cuts-v9, upload-reel-v2) 서버 n8n에서 실행 확인. 로컬 모의 시험 15개는 통과, HTTP 조회·Data Table 노드는 실제 n8n에서 아직 확인 전
+- [x] 이미지 캐러셀 서버에서 실행 확인 (표지+5컷, 2026-10-30_001 게시 성공)
+- [x] 중복 게시 방지: Data Table `posted`(episode, kind)에 기록하고 시작 시 검사. 같은 episode를 다시 실행하면 `이미 올렸나? 확인`에서 멈추는 것까지 서버에서 확인 (이미지 워크플로 기준)
+- [x] 이미지 자동 탐색 버전(upload-cuts-v9) 서버 실행 확인
+- [ ] 릴스 자동 탐색 버전(upload-reel-v2) 서버 실행 확인 (모의 시험은 통과, 실제 n8n에서는 아직)
 - [ ] 토큰 자동 갱신(장기 토큰 60일), 매일 예약 실행 (시작 노드를 Schedule로 교체)
 - [ ] 유튜브 쇼츠 업로드 (별도 워크플로)
 
