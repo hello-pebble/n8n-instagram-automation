@@ -7,3 +7,4 @@ backup/
 compose.yaml
 upload-cuts-v7.json
 velog-*.md
+rclone.conf

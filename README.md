@@ -193,7 +193,7 @@ mkdir -p ~/n8n-server/local-files/media/test
 
 ---
 
-## 10. 오래된 순으로 하나씩 올리기 (이미지 v10 / 릴스 v3)
+## 10. 오래된 순으로 하나씩 올리기 (이미지 v11 / 릴스 v4)
 
 `episode`, 컷 수, 표지 유무, 제목을 직접 입력하지 않는다. 서버에 쌓인 폴더 중 **아직 안 올린 가장 오래된 하나**를 실행할 때마다 올린다. 날짜와 상관없으니 에피소드를 몰아서 만들어 둬도 된다.
 
@@ -224,7 +224,7 @@ local-files/media/2026-10-30_001/
 | 이미 올렸나? 확인 | `posted` 표에 없는 것만 남긴다 |
 | 올릴 파일 확인 | 이미지는 `00.jpg` 또는 `01.jpg`, 릴스는 `reel.mp4`가 있는 폴더만 남긴다 (영상만 있는 폴더가 이미지 순서를 막지 않는다) |
 | 첫 번째만 | 남은 것 중 가장 오래된 **하나**만 진행 |
-| 이후 | 컷 수 계산(이미지), 제목 읽기, 게시, `posted`에 기록 |
+| 이후 | 컷 수 계산(이미지), 제목 읽기, 게시, `posted`에 기록, 폴더에 표시 파일(`posted_cuts.marker` 또는 `posted_reel.marker`) 쓰기 |
 
 - `title.txt`가 준비 완료 표시다. 이미지를 다 올린 **마지막에** 올린다. 이미지가 중간에 비면(`02.jpg`만 없음) 오류로 멈춘다.
 - 제목은 `title.txt` 첫 줄이다. 파일이 비어 있거나 `#숫자`가 있으면 오류로 멈춘다.
@@ -232,3 +232,80 @@ local-files/media/2026-10-30_001/
 - n8n 컨테이너가 `/files/media`를 읽을 수 있어야 한다 (폴더 권한이 모두 읽기 가능이면 된다).
 
 **예약 실행으로 바꾸기**: 시작 노드 `수동 실행`을 Schedule 노드로 교체한다.
+
+---
+
+## 11. 구글 드라이브로 올리고, 게시 후 자동 정리 (rclone + cron)
+
+PC에서 서버로 `scp` 하지 않고 구글 드라이브에 올리면 서버가 알아서 가져오고, 게시가 끝나면 지운다.
+
+| 단계 | 하는 일 | 누가 |
+|---|---|---|
+| 1 | 드라이브 `n8n-instagram/inbox/<episode>/`에 이미지, `reel.mp4`, `title.txt`를 올린다 | 사용자 |
+| 2 | 10분마다 서버가 `inbox/`를 서버 `media`로 복사한다 | 서버 cron |
+| 3 | n8n이 가장 오래된 안 올린 에피소드 하나를 게시한다 | n8n |
+| 4 | 게시 성공 후 n8n이 폴더에 `posted_cuts.marker` / `posted_reel.marker`를 쓴다 | n8n |
+| 5 | 표시 후 30분이 지나면 서버 폴더를 삭제하고, 드라이브 폴더를 `inbox/` → `done/`으로 옮긴다 | 서버 cron |
+
+**복사 규칙**
+- 폴더 안 파일 목록(이름+크기)이 **직전 실행과 같을 때만** 복사한다. 구글 드라이브는 업로드 순서가 제멋대로라서, 한 번 더 지켜보고 변화가 없으면 끝난 것으로 본다.
+- `title.txt`는 맨 마지막에 복사한다 (준비 완료 표시).
+- 삭제는 폴더에 있는 종류마다(이미지=`cuts`, 영상=`reel`) 표시 파일이 **모두** 있을 때만 한다. 이미지만 게시되고 영상은 아직이면 지우지 않는다.
+
+**서버 설정 (한 번만)**
+
+1. 드라이브에 `n8n-instagram/inbox`, `n8n-instagram/done` 폴더를 만든다.
+2. 서버에 rclone을 설치한다 (rclone 공식 설치 스크립트).
+
+```bash
+curl -fsSL https://rclone.org/install.sh | sudo bash
+```
+
+3. 구글 계정 연결 (서버에는 브라우저가 없어서 PC에서 인증한 토큰을 붙여 넣는다). PC에 rclone을 설치하고(`winget install Rclone.Rclone`) 실행한다.
+
+```powershell
+rclone authorize "drive"
+```
+
+브라우저에서 로그인하면 터미널에 토큰(`{"access_token": ...}`)이 나온다. 서버에서 설정을 시작해서 `n`(새 remote), 이름 `gdrive`, 종류 `drive`를 고르고, client_id와 secret은 비워 두고 scope는 `1`(전체 접근)을 고른 뒤, 브라우저 자동 인증 질문에 `n`을 고르고 그 토큰을 붙여 넣는다.
+
+```bash
+sudo rclone config
+```
+
+⚠ 토큰은 `rclone.conf`에 저장된다. 저장소나 채팅에 절대 붙이지 않는다 (`.gitignore`에 `rclone.conf` 포함).
+
+4. 연결을 확인한다. `inbox`, `done`이 보이면 된다.
+
+```bash
+sudo rclone lsd gdrive:n8n-instagram
+```
+
+5. 스크립트를 설치하고 한 번 실행해 본다.
+
+```bash
+sudo install -m 755 scripts/sync-media.sh /usr/local/bin/sync-media.sh
+sudo /usr/local/bin/sync-media.sh
+```
+
+6. 10분마다 돌도록 root cron에 등록한다 (`sudo crontab -e`에 아래 한 줄).
+
+```
+*/10 * * * * /usr/local/bin/sync-media.sh >> /var/log/sync-media.log 2>&1
+```
+
+**설정값 (환경변수, 기본값이면 따로 안 해도 된다)**
+
+| 이름 | 기본값 | 뜻 |
+|---|---|---|
+| `REMOTE` | `gdrive:n8n-instagram` | rclone remote와 경로 (`inbox/`, `done/`이 아래에 있다) |
+| `MEDIA` | `/home/ubuntu/n8n-server/local-files/media` | 서버의 media 폴더 |
+| `OWNER` | `1000:1000` | 복사한 파일의 소유자 (n8n 컨테이너 사용자) |
+| `DELETE_AFTER_MIN` | `30` | 마지막 표시 파일이 생기고 몇 분 뒤에 삭제할지 |
+
+값을 바꾸려면 cron 줄 앞에 `DELETE_AFTER_MIN=1440`처럼 붙인다.
+
+**알아둘 점**
+- 복사된 파일은 n8n 사용자(uid 1000) 소유라서, 서버에서 직접 올릴 때(`scp`)는 `sudo`가 필요하다. 드라이브로 올리면 신경 쓸 일이 없다.
+- 로그는 `/var/log/sync-media.log`에서 본다.
+- 삭제된 폴더의 원본은 드라이브 `done/`에 남는다. 필요 없으면 그곳에서 정리한다.

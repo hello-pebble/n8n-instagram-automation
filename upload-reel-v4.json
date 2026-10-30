@@ -1,5 +1,5 @@
 {
-  "name": "릴스 업로드 v3 (오래된 순 하나씩)",
+  "name": "릴스 업로드 v4 (오래된 순 + 표시 파일)",
   "nodes": [
     {
       "parameters": {},
@@ -468,6 +468,38 @@
       "parameters": {
         "jsCode": "const cands = $('올릴 파일 확인 후보').all();\nconst res = $input.all();\nconst ready = new Set();\ncands.forEach((c, i) => { if (res[i] && res[i].json.statusCode === 200) ready.add(c.json.episode); });\nreturn $('이미 올렸나? 확인').all()\n  .filter((it) => ready.has(it.json.episode))\n  .map((it) => ({ json: { episode: it.json.episode } }));"
       }
+    },
+    {
+      "id": "k1",
+      "name": "표시 내용 만들기",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3600,
+        100
+      ],
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "episode",
+        "binaryPropertyName": "data",
+        "options": {}
+      }
+    },
+    {
+      "id": "k2",
+      "name": "표시 파일 쓰기",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        3800,
+        100
+      ],
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/files/media/{{ $('올린 기록 남기기').first().json.episode }}/posted_reel.marker",
+        "dataPropertyName": "data",
+        "options": {}
+      }
     }
   ],
   "connections": {
@@ -677,6 +709,28 @@
         [
           {
             "node": "첫 번째만",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "올린 기록 남기기": {
+      "main": [
+        [
+          {
+            "node": "표시 내용 만들기",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "표시 내용 만들기": {
+      "main": [
+        [
+          {
+            "node": "표시 파일 쓰기",
             "type": "main",
             "index": 0
           }
