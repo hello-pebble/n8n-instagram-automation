@@ -3,7 +3,7 @@
 # root cron으로 실행한다 (복사한 파일의 소유자를 n8n 컨테이너 사용자로 바꾸기 위해).
 set -uo pipefail
 
-REMOTE="${REMOTE:-gdrive:n8n-instagram}"   # rclone remote:경로. 그 아래에 inbox/ 와 done/ 이 있다
+REMOTE="${REMOTE:-gdrive:}"                # rclone remote. 그 아래에 inbox/ 와 done/ 이 있다 (서비스 계정의 root_folder_id가 n8n-instagram 폴더)
 MEDIA="${MEDIA:-/home/ubuntu/n8n-server/local-files/media}"
 OWNER="${OWNER:-1000:1000}"                # n8n 컨테이너 사용자
 DELETE_AFTER_MIN="${DELETE_AFTER_MIN:-30}" # 마지막 표시 파일이 생기고 이 시간이 지나면 삭제

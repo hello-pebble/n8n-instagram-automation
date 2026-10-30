@@ -254,43 +254,59 @@ PC에서 서버로 `scp` 하지 않고 구글 드라이브에 올리면 서버�
 - 복사를 모두 마친 뒤에 `ready.txt`를 만든다. n8n은 `ready.txt`가 있는 폴더만 본다.
 - 삭제는 폴더에 있는 종류마다(이미지=`cuts`, 영상=`reel`) 표시 파일이 **모두** 있을 때만 한다. 이미지만 게시되고 영상은 아직이면 지우지 않는다. `ready.txt`가 없는 폴더는 지우지 않는다.
 
-**서버 설정 (한 번만)**
+**서버 설정 (한 번만)** — 서비스 계정 방식. 로그인 토큰이 만료되지 않고, 공유해 준 폴더 하나에만 접근한다.
 
 1. 드라이브에 `n8n-instagram/inbox`, `n8n-instagram/done` 폴더를 만든다.
-2. 서버에 rclone을 설치한다 (rclone 공식 설치 스크립트).
+2. 구글 클라우드 콘솔에서 프로젝트를 만들고 `Google Drive API`를 사용 설정한다.
+3. IAM 및 관리자 → 서비스 계정을 만들고(역할 없음), 키 → 새 키 → JSON을 내려받는다.
+   ⚠ 이 키 파일은 비밀이다. 저장소 폴더 안에 두지 않고, 저장소나 채팅에 절대 올리지 않는다. 서버에 올린 뒤 PC의 파일은 지워도 된다(필요하면 다시 만들 수 있다).
+4. 서비스 계정 이메일(`...@...iam.gserviceaccount.com`)에 드라이브 `n8n-instagram` 폴더를 **편집자**로 공유한다. 폴더를 열었을 때 주소의 `folders/` 뒤 문자열이 폴더 ID다.
+5. 서버에 rclone을 설치한다 (rclone 공식 설치 스크립트).
 
 ```bash
 curl -fsSL https://rclone.org/install.sh | sudo bash
 ```
 
-3. 구글 계정 연결 (서버에는 브라우저가 없어서 PC에서 인증한 토큰을 붙여 넣는다). PC에 rclone을 설치하고(`winget install Rclone.Rclone`) 실행한다.
+6. 키 파일을 서버로 올리고 root만 읽게 설치한다.
 
 ```powershell
-rclone authorize "drive"
+scp -i 키파일 .\내려받은키.json ubuntu@서버:~/sa.json
 ```
 
-브라우저에서 로그인하면 터미널에 토큰(`{"access_token": ...}`)이 나온다. 서버에서 설정을 시작해서 `n`(새 remote), 이름 `gdrive`, 종류 `drive`를 고르고, client_id와 secret은 비워 두고 scope는 `1`(전체 접근)을 고른 뒤, 브라우저 자동 인증 질문에 `n`을 고르고 그 토큰을 붙여 넣는다.
+```bash
+sudo install -m 600 -o root -g root ~/sa.json /root/rclone-sa.json && rm ~/sa.json
+```
+
+7. rclone을 설정한다.
 
 ```bash
 sudo rclone config
 ```
 
-⚠ 토큰은 `rclone.conf`에 저장된다. 저장소나 채팅에 절대 붙이지 않는다 (`.gitignore`에 `rclone.conf` 포함).
+| 질문 | 입력 |
+|---|---|
+| name / Storage | `gdrive` / `drive` |
+| client_id, client_secret | 비워 두고 Enter |
+| scope | `1` |
+| service_account_file | `/root/rclone-sa.json` |
+| Edit advanced config | `y` → `root_folder_id`에 4번의 폴더 ID 입력, 나머지(`auth_owner_only` `false`, `use_trash` `true` 등)는 Enter |
+| Shared Drive | `n` |
 
-4. 연결을 확인한다. `inbox`, `done`이 보이면 된다.
+8. 연결을 확인한다. `inbox`, `done`이 보이면 된다.
 
 ```bash
-sudo rclone lsd gdrive:n8n-instagram
+sudo rclone lsd gdrive:
+sudo rclone lsf gdrive:/inbox
 ```
 
-5. 스크립트를 설치하고 한 번 실행해 본다.
+9. 스크립트를 서버로 올려 설치하고 두 번 실행해 본다. 첫 실행은 `업로드 확인 중`, 두 번째에서 `복사`가 나와야 한다.
 
 ```bash
-sudo install -m 755 scripts/sync-media.sh /usr/local/bin/sync-media.sh
+sudo install -m 755 ~/sync-media.sh /usr/local/bin/sync-media.sh
 sudo /usr/local/bin/sync-media.sh
 ```
 
-6. 10분마다 돌도록 root cron에 등록한다 (`sudo crontab -e`에 아래 한 줄).
+10. 10분마다 돌도록 root cron에 등록한다 (`sudo crontab -e`에 아래 한 줄).
 
 ```
 */10 * * * * /usr/local/bin/sync-media.sh >> /var/log/sync-media.log 2>&1
@@ -300,7 +316,7 @@ sudo /usr/local/bin/sync-media.sh
 
 | 이름 | 기본값 | 뜻 |
 |---|---|---|
-| `REMOTE` | `gdrive:n8n-instagram` | rclone remote와 경로 (`inbox/`, `done/`이 아래에 있다) |
+| `REMOTE` | `gdrive:` | rclone remote. 서비스 계정 설정에서 폴더 ID를 루트로 지정했으므로 `inbox/`, `done/`이 바로 아래에 있다 |
 | `MEDIA` | `/home/ubuntu/n8n-server/local-files/media` | 서버의 media 폴더 |
 | `OWNER` | `1000:1000` | 복사한 파일의 소유자 (n8n 컨테이너 사용자) |
 | `DELETE_AFTER_MIN` | `30` | 마지막 표시 파일이 생기고 몇 분 뒤에 삭제할지 |

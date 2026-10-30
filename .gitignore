@@ -8,3 +8,7 @@ compose.yaml
 upload-cuts-v7.json
 velog-*.md
 rclone.conf
+n8n-instagram-*.json
+*-key.json
+sa.json
+*.pem
