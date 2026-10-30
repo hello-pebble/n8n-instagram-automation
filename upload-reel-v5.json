@@ -1,9 +1,9 @@
 {
-  "name": "컷 업로드 v11 (오래된 순 + 표시 파일)",
+  "name": "릴스 업로드 v5 (제목 선택)",
   "nodes": [
     {
       "parameters": {},
-      "id": "b1",
+      "id": "r1",
       "name": "수동 실행",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -17,25 +17,25 @@
         "assignments": {
           "assignments": [
             {
-              "id": "c1",
+              "id": "s1",
               "name": "ig_user_id",
               "value": "여기에_user_id_숫자",
               "type": "string"
             },
             {
-              "id": "c2",
+              "id": "s2",
               "name": "base_url",
               "value": "https://여기에_도메인/media",
               "type": "string"
             },
             {
-              "id": "c8",
+              "id": "s4",
               "name": "series",
               "value": "여기에_캐릭터이름",
               "type": "string"
             },
             {
-              "id": "c6",
+              "id": "s6",
               "name": "hashtags",
               "value": "#인스타툰 #AI생성",
               "type": "string"
@@ -44,7 +44,7 @@
         },
         "options": {}
       },
-      "id": "b2",
+      "id": "r2",
       "name": "설정",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -55,150 +55,16 @@
     },
     {
       "parameters": {
-        "jsCode": "const s = $('설정').first().json;\nconst c = $('컷 수 계산').first().json;\nconst title = String($input.first().json.data ?? '').replace(/^﻿/, '').split(/\\r?\\n/)[0].trim();\nif (!title) throw new Error(`title.txt가 비어 있어요: ${c.episode}`);\nif (/#\\s*\\d/.test(title)) throw new Error(`제목에 #숫자는 쓸 수 없어요(해시태그로 변환돼요): ${title}`);\nconst m = c.episode.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) throw new Error(`episode 형식 오류: ${c.episode}`);\nconst epNo = Number(m[2]);\nif (c.total > 20) throw new Error(`이미지는 20장 이하여야 해요: ${c.total}장`);\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst caption = `[${s.series} ${epNo}화] ${title}\\n\\n📝 대본: 직접 씀 / 🎨 그림: AI 생성\\n\\n${s.hashtags}`;\nreturn Array.from({ length: c.total }, (_, i) => ({\n  json: {\n    image_url: `${base}/${c.episode}/${String(c.start + i).padStart(2, '0')}.jpg`,\n    caption,\n    cut_count: c.total,\n    episode: c.episode,\n  },\n}));"
+        "jsCode": "const s = $('설정').first().json;\nconst episode = $('첫 번째만').first().json.episode;\nconst r = $input.first().json;\nconst raw = r.statusCode === 200 ? String(r.body ?? r.data ?? '') : '';\nconst title = raw.replace(/^﻿/, '').split(/\\r?\\n/)[0].trim();\nif (/#\\s*\\d/.test(title)) throw new Error(`제목에 #숫자는 쓸 수 없어요(해시태그로 변환돼요): ${title}`);\nconst m = episode.match(/^(\\d{4}-\\d{2}-\\d{2})_(\\d{3})$/);\nif (!m) throw new Error(`episode 형식 오류: ${episode}`);\nconst epNo = Number(m[2]);\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst head = `[${s.series} ${epNo}화]` + (title ? ` ${title}` : '');\nconst caption = `${head}\\n\\n${s.hashtags}`;\nreturn [{ json: { video_url: `${base}/${episode}/reel.mp4`, caption, episode } }];"
       },
-      "id": "b3",
-      "name": "컷 주소·캡션 만들기",
+      "id": "r3",
+      "name": "영상 주소·캡션 만들기",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2600,
+        2000,
         200
       ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "id": "if1",
-              "leftValue": "={{ $json.cut_count }}",
-              "rightValue": 1,
-              "operator": {
-                "type": "number",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "b4",
-      "name": "1장인가?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        2800,
-        200
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpQueryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "image_url",
-              "value": "={{ $json.image_url }}"
-            },
-            {
-              "name": "caption",
-              "value": "={{ $json.caption }}"
-            },
-            {
-              "name": "is_ai_generated",
-              "value": "true"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "b5",
-      "name": "[1장] 사진 등록 (AI 라벨)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3200,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://graph.instagram.com/{{ $('설정').first().json.ig_user_id }}/media",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpQueryAuth",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "image_url",
-              "value": "={{ $json.image_url }}"
-            },
-            {
-              "name": "is_carousel_item",
-              "value": "true"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "b6",
-      "name": "[여러 장] 컷 등록",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        3000,
-        400
-      ]
-    },
-    {
-      "parameters": {
-        "fieldsToAggregate": {
-          "fieldToAggregate": [
-            {
-              "fieldToAggregate": "id",
-              "renameField": true,
-              "outputFieldName": "ids"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "b7",
-      "name": "컷 ID 모으기",
-      "type": "n8n-nodes-base.aggregate",
-      "typeVersion": 1,
-      "position": [
-        3200,
-        400
-      ]
-    },
-    {
-      "parameters": {
-        "resume": "timeInterval",
-        "amount": 10,
-        "unit": "seconds"
-      },
-      "id": "b8",
-      "name": "10초 기다리기",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        3400,
-        400
-      ],
-      "webhookId": "cuts-wait-a"
     },
     {
       "parameters": {
@@ -211,15 +77,19 @@
           "parameters": [
             {
               "name": "media_type",
-              "value": "CAROUSEL"
+              "value": "REELS"
             },
             {
-              "name": "children",
-              "value": "={{ $json.ids.join(',') }}"
+              "name": "video_url",
+              "value": "={{ $json.video_url }}"
             },
             {
               "name": "caption",
-              "value": "={{ $('컷 주소·캡션 만들기').first().json.caption }}"
+              "value": "={{ $json.caption }}"
+            },
+            {
+              "name": "share_to_feed",
+              "value": "true"
             },
             {
               "name": "is_ai_generated",
@@ -229,13 +99,13 @@
         },
         "options": {}
       },
-      "id": "b9",
-      "name": "[여러 장] 묶기 (AI 라벨)",
+      "id": "r4",
+      "name": "릴스 등록 (AI 라벨)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3600,
-        400
+        2200,
+        200
       ]
     },
     {
@@ -252,30 +122,30 @@
         },
         "options": {}
       },
-      "id": "b10",
+      "id": "r5",
       "name": "게시할 ID",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        3800,
+        2400,
         200
       ]
     },
     {
       "parameters": {
         "resume": "timeInterval",
-        "amount": 15,
+        "amount": 30,
         "unit": "seconds"
       },
-      "id": "b11",
-      "name": "15초 기다리기",
+      "id": "r6",
+      "name": "30초 기다리기",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        4000,
+        2600,
         200
       ],
-      "webhookId": "cuts-wait-b"
+      "webhookId": "reel-wait-a"
     },
     {
       "parameters": {
@@ -294,13 +164,90 @@
         },
         "options": {}
       },
-      "id": "b12",
+      "id": "r7",
       "name": "상태 확인",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4200,
+        2800,
         200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "if1",
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": "FINISHED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "r8",
+      "name": "처리 끝났나?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "if2",
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": "IN_PROGRESS",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "r9",
+      "name": "실패인가?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3200,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=릴스 처리 실패: {{ $json.status_code }} (영상 형식·길이·주소를 확인하세요)"
+      },
+      "id": "r10",
+      "name": "중단",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        3400,
+        500
       ]
     },
     {
@@ -320,13 +267,13 @@
         },
         "options": {}
       },
-      "id": "b13",
+      "id": "r11",
       "name": "게시하기",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4400,
-        200
+        3200,
+        100
       ]
     },
     {
@@ -355,7 +302,7 @@
             },
             {
               "keyName": "kind",
-              "keyValue": "cuts"
+              "keyValue": "reel"
             }
           ]
         }
@@ -367,8 +314,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        4600,
-        200
+        3400,
+        100
       ],
       "parameters": {
         "resource": "row",
@@ -381,8 +328,8 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "episode": "={{ $('컷 주소·캡션 만들기').first().json.episode }}",
-            "kind": "cuts"
+            "episode": "={{ $('영상 주소·캡션 만들기').first().json.episode }}",
+            "kind": "reel"
           },
           "matchingColumns": [],
           "schema": [
@@ -427,59 +374,11 @@
     },
     {
       "id": "n5",
-      "name": "컷 후보 만들기",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1800,
-        200
-      ],
-      "parameters": {
-        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst episode = $input.first().json.episode;\nconst out = [];\nfor (let i = 0; i <= 20; i++) {\n  out.push({ json: { episode, url: `${base}/${episode}/${String(i).padStart(2, '0')}.jpg` } });\n}\nreturn out;"
-      }
-    },
-    {
-      "id": "n6",
-      "name": "컷 조회",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2000,
-        200
-      ],
-      "parameters": {
-        "method": "HEAD",
-        "url": "={{ $json.url }}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "neverError": true
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "n7",
-      "name": "컷 수 계산",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2200,
-        200
-      ],
-      "parameters": {
-        "jsCode": "const episode = $('컷 후보 만들기').first().json.episode;\nconst ok = $input.all().map((r) => r.json.statusCode === 200);\nconst hasCover = ok[0];\nconst start = hasCover ? 0 : 1;\nlet total = 0;\nfor (let i = start; i < ok.length && ok[i]; i++) total++;\nif (ok.slice(start + total).some(Boolean)) throw new Error(`컷 번호가 중간에 비어 있어요(${episode}). 파일 이름을 확인하세요`);\nif (total === 0) return []; // 이미지 없는 폴더(영상만 있는 에피소드)는 조용히 건너뜀\nreturn [{ json: { episode, has_cover: hasCover, start, total } }];"
-      }
-    },
-    {
-      "id": "n8",
       "name": "제목 읽기",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2400,
+        1800,
         200
       ],
       "parameters": {
@@ -488,6 +387,8 @@
         "options": {
           "response": {
             "response": {
+              "fullResponse": true,
+              "neverError": true,
               "responseFormat": "text"
             }
           }
@@ -505,7 +406,7 @@
       ],
       "parameters": {
         "operation": "read",
-        "fileSelector": "/files/media/*/title.txt",
+        "fileSelector": "/files/media/*/ready.txt",
         "options": {}
       }
     },
@@ -532,7 +433,7 @@
         200
       ],
       "parameters": {
-        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nconst out = [];\nfor (const it of $input.all()) {\n  const ep = it.json.episode;\n  for (const f of ['00', '01']) out.push({ json: { episode: ep, url: `${base}/${ep}/${f}.jpg` } });\n}\nreturn out;"
+        "jsCode": "const s = $('설정').first().json;\nconst base = String(s.base_url).replace(/\\/$/, '');\nreturn $input.all().map((it) => ({ json: { episode: it.json.episode, url: `${base}/${it.json.episode}/reel.mp4` } }));"
       }
     },
     {
@@ -576,8 +477,8 @@
       "type": "n8n-nodes-base.convertToFile",
       "typeVersion": 1.1,
       "position": [
-        4800,
-        200
+        3600,
+        100
       ],
       "parameters": {
         "operation": "toText",
@@ -592,12 +493,12 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        5000,
-        200
+        3800,
+        100
       ],
       "parameters": {
         "operation": "write",
-        "fileName": "=/files/media/{{ $('올린 기록 남기기').first().json.episode }}/posted_cuts.marker",
+        "fileName": "=/files/media/{{ $('올린 기록 남기기').first().json.episode }}/posted_reel.marker",
         "dataPropertyName": "data",
         "options": {}
       }
@@ -626,80 +527,18 @@
         ]
       ]
     },
-    "컷 주소·캡션 만들기": {
+    "영상 주소·캡션 만들기": {
       "main": [
         [
           {
-            "node": "1장인가?",
+            "node": "릴스 등록 (AI 라벨)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "1장인가?": {
-      "main": [
-        [
-          {
-            "node": "[1장] 사진 등록 (AI 라벨)",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "[여러 장] 컷 등록",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "[1장] 사진 등록 (AI 라벨)": {
-      "main": [
-        [
-          {
-            "node": "게시할 ID",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "[여러 장] 컷 등록": {
-      "main": [
-        [
-          {
-            "node": "컷 ID 모으기",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "컷 ID 모으기": {
-      "main": [
-        [
-          {
-            "node": "10초 기다리기",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "10초 기다리기": {
-      "main": [
-        [
-          {
-            "node": "[여러 장] 묶기 (AI 라벨)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "[여러 장] 묶기 (AI 라벨)": {
+    "릴스 등록 (AI 라벨)": {
       "main": [
         [
           {
@@ -714,14 +553,14 @@
       "main": [
         [
           {
-            "node": "15초 기다리기",
+            "node": "30초 기다리기",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "15초 기다리기": {
+    "30초 기다리기": {
       "main": [
         [
           {
@@ -736,7 +575,43 @@
       "main": [
         [
           {
+            "node": "처리 끝났나?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "처리 끝났나?": {
+      "main": [
+        [
+          {
             "node": "게시하기",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "실패인가?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "실패인가?": {
+      "main": [
+        [
+          {
+            "node": "중단",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "30초 기다리기",
             "type": "main",
             "index": 0
           }
@@ -769,39 +644,6 @@
       "main": [
         [
           {
-            "node": "컷 후보 만들기",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "컷 후보 만들기": {
-      "main": [
-        [
-          {
-            "node": "컷 조회",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "컷 조회": {
-      "main": [
-        [
-          {
-            "node": "컷 수 계산",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "컷 수 계산": {
-      "main": [
-        [
-          {
             "node": "제목 읽기",
             "type": "main",
             "index": 0
@@ -813,7 +655,7 @@
       "main": [
         [
           {
-            "node": "컷 주소·캡션 만들기",
+            "node": "영상 주소·캡션 만들기",
             "type": "main",
             "index": 0
           }
@@ -898,5 +740,7 @@
       ]
     }
   },
-  "settings": {}
+  "settings": {
+    "executionTimeout": 900
+  }
 }
